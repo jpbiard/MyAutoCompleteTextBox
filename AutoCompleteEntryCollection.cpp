@@ -15,7 +15,7 @@ void AutoCompleteEntryCollection::AddRange(ICollection^ col)	{
 }
 
 void AutoCompleteEntryCollection::Add(AutoCompleteEntry^ entry) {
-	this->InnerList->Add(entry);
+	this->InnerList->Add( entry );
 }
 
 array<Object^>^ AutoCompleteEntryCollection::ToObjectArray() {

@@ -34,7 +34,7 @@ void MyAutoCompleteTextBox::WinHook::WndProc(Message% m) {
 			Rectangle^ rect = gcnew Rectangle( p2, tb->Size );
 			// Hide the popup if it is not in the text box
 			if ( ! rect->Contains( p ) ) {
-				//tb->HideList();
+				tb->HideList();
 			}
 		}
 			break;
@@ -80,9 +80,14 @@ void MyAutoCompleteTextBox::WndProc(Message% m) {
 
 	switch (m.Msg)	{
 		case Win32::Messages::WM_LBUTTONDOWN:
-			{
 			this->ShowList();
-			}
+			break;
+		case Win32::Messages::WM_KEYDOWN:
+			// pour pouvoir selectionner en pressant 'ENTER'
+			if (this->popup->Visible == true) {
+				this->SelectCurrentItem();
+				this->HideList();			}
+			break;
 	}
 	__super::WndProc( m );
 }
@@ -108,8 +113,8 @@ MyAutoCompleteTextBox::MyAutoCompleteTextBox(void) {
 	this->list = gcnew ListBox();
 	this->list->Cursor = Cursors::Hand;
 	this->list->BorderStyle = System::Windows::Forms::BorderStyle::None;
-	this->list->SelectedIndexChanged += gcnew EventHandler(this, &MyAutoCompleteTextBox::List_SelectedIndexChanged);
-	this->list->MouseDown += gcnew MouseEventHandler(this, &MyAutoCompleteTextBox::List_MouseDown);
+	this->list->SelectedIndexChanged += gcnew EventHandler( this, &MyAutoCompleteTextBox::List_SelectedIndexChanged );
+	this->list->MouseDown += gcnew MouseEventHandler( this, &MyAutoCompleteTextBox::List_MouseDown );
 	this->list->ItemHeight = 14;
 	this->list->DrawMode = DrawMode::OwnerDrawFixed;
 	this->list->DrawItem += gcnew DrawItemEventHandler(this, &MyAutoCompleteTextBox::List_DrawItem);
@@ -179,11 +184,11 @@ void MyAutoCompleteTextBox::ShowList() {
 		p.X += this->PopupOffset->X;
 		p.Y += this->Height + this->PopupOffset->Y;
 		this->popup->Location = p;
-		if (this->list->Items->Count > 0) {
+		if ( this->list->Items->Count > 0 ) {
 			this->popup->Show();
 			if ( this->hook == nullptr ) {
 				this->hook = gcnew WinHook( this );
-				this->hook->AssignHandle(this->FindForm()->Handle);
+				this->hook->AssignHandle( this->FindForm()->Handle );
 			}
 			this->Focus();
 		}
@@ -227,7 +232,8 @@ bool MyAutoCompleteTextBox::ProcessCmdKey(Message% msg, Keys keyData) {
 				this->list->SelectedIndex--;
 			}
 			return true;
-		} break;
+		}
+		break;
 		case Keys::Down:
 		{
 			this->Mode = EntryMode::List;
@@ -236,7 +242,8 @@ bool MyAutoCompleteTextBox::ProcessCmdKey(Message% msg, Keys keyData) {
 				this->list->SelectedIndex++;
 			}
 			return true;
-		} break;
+		} 
+		break;
 		default:
 		{
 			return DefaultCmdKey(msg, keyData);
@@ -279,7 +286,7 @@ void MyAutoCompleteTextBox::UpdateList() {
 	Object^ selectedItem = this->list->SelectedItem;
 
 	this->list->Items->Clear();
-	this->list->Items->AddRange(this->FilterList(this->Items)->ToObjectArray());
+	this->list->Items->AddRange( this->FilterList( this->Items )->ToObjectArray() );
 
 	if (selectedItem != nullptr && this->list->Items->Contains(selectedItem)) {
 		EntryMode oldMode = this->Mode;
@@ -324,13 +331,19 @@ void MyAutoCompleteTextBox::UpdateList() {
 
 AutoCompleteEntryCollection^ MyAutoCompleteTextBox::FilterList(AutoCompleteEntryCollection^ list) {
 	AutoCompleteEntryCollection^ newList = gcnew AutoCompleteEntryCollection();
+
+	// si le text est vide, montrer toute la liste
+	if ( this->Text->Length == 0 ) {
+		return list;
+	}
+	
 	array<AutoCompleteEntry^>^ listArray = static_cast< array<AutoCompleteEntry^>^ >( list->ToObjectArray() );
 
 	for (int i = 0; i < listArray->Length; i++ ) {
 		AutoCompleteEntry^ entry = listArray[i];
 		String^ match = entry->MatchStrings;
-		if (match->ToUpper()->StartsWith(this->Text->ToUpper())) {
-			newList->Add(entry);
+		if ( match->ToUpper()->StartsWith( this->Text->ToUpper() ) ) {
+			newList->Add( entry );
 			break;
 		}
 	}
